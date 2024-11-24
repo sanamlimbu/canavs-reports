@@ -1,10 +1,10 @@
 # Canvas Report
 
-A web service that interacts with Canvas LMS API to provide information about courses, assignments, and enrollments as comprehensive reports.
+A web service that interacts with Canvas LMS API to provide information about courses, assignments, enrollments, etc. as comprehensive reports.
 
 ## Features
 
-- Fetch ungraded assignments for a specific course, organized by section.
+- Fetch ungraded assignments for a specific course, organised by section.
 - Retrieve student enrollments and assignments result.
 
 ## Prerequisites
@@ -39,3 +39,7 @@ A web service that interacts with Canvas LMS API to provide information about co
 Currently, there is no authentication implemented. However, `withAuth` middleware is available and can be used if authentication is required.
 
 Supabase can be used for user authentication, handling login and token generation seamlessly. The client can then include the token as a bearer token in API requests to authenticate users.
+
+# Deployment
+
+The provided Terraform files deploy a Go binary as an AWS Lambda function behind an API Gateway. Modify the Terraform configuration and make any necessary adjustments to meet the requirements.
