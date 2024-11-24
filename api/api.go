@@ -13,15 +13,17 @@ import (
 
 type APIController struct {
 	canvasClient *canvas.CanvasClient
+	auther       *auther
 }
 
-func NewAPIController(canvasClient *canvas.CanvasClient) (*APIController, error) {
+func NewAPIController(canvasClient *canvas.CanvasClient, auther *auther) (*APIController, error) {
 	if canvasClient == nil {
 		return nil, fmt.Errorf("missing canvas client")
 	}
 
 	controller := &APIController{
 		canvasClient: canvasClient,
+		auther:       auther,
 	}
 
 	return controller, nil

@@ -2,22 +2,16 @@
 
 A web service that interacts with Canvas LMS API to provide information about courses, assignments, and enrollments as comprehensive reports.
 
----
-
 ## Features
 
 - Fetch ungraded assignments for a specific course, organized by section.
 - Retrieve student enrollments and assignments result.
 
----
-
-### Prerequisites
+## Prerequisites
 
 - Canvas LMS admin account and admin's API access token
 
----
-
-### Steps to Run
+## Steps to Run
 
 1. Clone the repository.
 
@@ -39,3 +33,9 @@ A web service that interacts with Canvas LMS API to provide information about co
    ```bash
    go run cmd/server/main.go
    ```
+
+## Authentication
+
+Currently, there is no authentication implemented. However, `withAuth` middleware is available and can be used if authentication is required.
+
+Supabase can be used for user authentication, handling login and token generation seamlessly. The client can then include the token as a bearer token in API requests to authenticate users.

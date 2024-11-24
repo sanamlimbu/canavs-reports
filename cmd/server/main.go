@@ -44,7 +44,7 @@ func main() {
 		panic(fmt.Errorf("error creating canvas client: %w", err))
 	}
 
-	apiController, err := api.NewAPIController(canvasClient)
+	apiController, err := api.NewAPIController(canvasClient, nil)
 	if err != nil {
 		panic(fmt.Errorf("error creating api controller: %w", err))
 	}
