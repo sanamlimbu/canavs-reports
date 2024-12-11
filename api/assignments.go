@@ -374,6 +374,10 @@ loop:
 					continue loop
 				}
 
+				if courseByCourseID[enrollment.CourseID].WorkflowState != string(canvas.AvailableCourseWorkflowState) {
+					continue
+				}
+
 				data, code, err := c.canvasClient.GetAssignmentsDataOfUserByCourseID(ctx, userID, enrollment.CourseID)
 				if err != nil {
 					http.Error(w, fmt.Sprintf("error fetching assignment results of user: %d and course: %d", userID, enrollment.CourseID), code)
