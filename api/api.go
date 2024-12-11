@@ -53,6 +53,7 @@ func NewRouter(c *APIController, allowedOrigins []string) *chi.Mux {
 		r.Get("/courses/{course_id}/ungraded-assignments", c.GetUngradedAssignmentsByCourseID)
 		r.Get("/users/{user_id}/student-enrollments-result", c.GetStudentEnrollmentsResultByUserID)
 		r.Get("/users/{user_id}/student-assignments-result", c.GetStudentAssignmentsResultByUserID)
+		r.Get("/users/{user_id}/ungraded-assignments", c.GetUngradedAssignmentsByUserID)
 
 		r.Get("/health", healthCheck)
 	})

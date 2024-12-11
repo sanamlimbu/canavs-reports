@@ -34,6 +34,143 @@ type UngradedAssignment struct {
 	GradebookURL          string    `json:"gradebook_url"`
 }
 
+type GetUngradedAssignmentsByUserIDResponse struct {
+	UserSisID       string      `json:"user_sis_id"`
+	UserName        string      `json:"user_name"`
+	AcccountName    string      `json:"account_name"`
+	CourseName      string      `json:"course_name"`
+	SisSectionID    null.String `json:"sis_section_id"`
+	AssignmentTitle string      `json:"assignment_title"`
+	PointsPossible  null.Float  `json:"points_possible"`
+	Score           null.Float  `json:"score"`
+	SubmittedAt     string      `json:"submitted_at"`
+	Status          string      `json:"status"`
+	CourseState     string      `json:"course_state"`
+	EnrollmentRole  string      `json:"enrollment_role"`
+	EnrollmentState string      `json:"enrollment_state"`
+	SpeedGraderUrl  string      `json:"speedgrader_url"`
+}
+
+// GetUngradedAssignmentsByUser returns assignments that has submission that needs to be graded.
+func (c *APIController) GetUngradedAssignmentsByUserID(w http.ResponseWriter, r *http.Request) {
+	userIDParam := chi.URLParam(r, "user_id")
+	if userIDParam == "" {
+		http.Error(w, "user not found", http.StatusNotFound)
+		return
+	}
+
+	userID, err := strconv.Atoi(userIDParam)
+	if err != nil {
+		http.Error(w, "user not found", http.StatusNotFound)
+		return
+	}
+
+	if userID <= 0 {
+		http.Error(w, "user not found", http.StatusNotFound)
+		return
+	}
+
+	user, code, err := c.canvasClient.GetUserByID(userID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("error fetching user: %d", userID), code)
+		return
+	}
+
+	ctx, cancel := context.WithCancel(r.Context())
+	defer cancel()
+
+	results := make([]*GetUngradedAssignmentsByUserIDResponse, 0)
+
+	coursesMap := make(map[int]canvas.Course)
+
+	courses, code, err := c.canvasClient.GetCoursesByUserID(ctx, user.ID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("error fetching courses of user: %d", user.ID), code)
+		return
+	}
+
+	for _, course := range courses {
+		coursesMap[course.ID] = *course
+	}
+
+	// skip "invited", "rejected", and "deleted" enrollments
+	states := []canvas.EnrollmentState{canvas.ActiveEnrollmentState, canvas.CompletedEnrollmentState}
+	enrollments, code, err := c.canvasClient.GetEnrollmentsByUserID(ctx, user.ID, states)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("error fetching enrollments of user: %d", user.ID), code)
+		return
+	}
+
+	for _, enrollment := range enrollments {
+		select {
+		case <-ctx.Done():
+			http.Error(w, ctx.Err().Error(), http.StatusRequestTimeout)
+			return
+		default:
+			{
+				if enrollment.Role != string(canvas.StudentEnrollmentType) {
+					continue
+				}
+
+				if coursesMap[enrollment.CourseID].WorkflowState != string(canvas.AvailableCourseWorkflowState) {
+					continue
+				}
+
+				data, code, err := c.canvasClient.GetSubmissionsByCourseID(ctx, enrollment.CourseID, user.ID, canvas.SubmittedSubmissionWorkflowState)
+				if err != nil {
+					http.Error(w, fmt.Sprintf("error fetching submissions of course: %d by user: %d", enrollment.CourseID, user.ID), code)
+					return
+				}
+
+				for _, submission := range data {
+					result := &GetUngradedAssignmentsByUserIDResponse{
+						AssignmentTitle: submission.Assignment.Name,
+						PointsPossible:  submission.Assignment.PointsPossible,
+						Score:           submission.Score,
+						SubmittedAt:     submission.SubmittedAt.String,
+						UserSisID:       user.SISUserID,
+						UserName:        user.Name,
+						SisSectionID:    enrollment.SISSectionID,
+						EnrollmentRole:  enrollment.Role,
+						EnrollmentState: enrollment.EnrollmentState,
+						Status:          "on_time",
+						SpeedGraderUrl: fmt.Sprintf("%s/courses/%d/gradebook/speed_grader?assignment_id=%d&student_id=%d",
+							c.canvasClient.WebUrl, enrollment.CourseID, submission.AssignmentID, submission.UserID),
+					}
+
+					if submission.Late {
+						result.Status = "late"
+					}
+
+					if course, ok := coursesMap[enrollment.CourseID]; ok {
+						result.AcccountName = course.Account.Name
+						result.CourseName = course.Name
+						result.CourseState = course.WorkflowState
+					} else {
+						course, code, err := c.canvasClient.GetCourseByID(enrollment.CourseID)
+						if err != nil {
+							http.Error(w, fmt.Sprintf("error fetching course: %d", enrollment.CourseID), code)
+							return
+						}
+
+						coursesMap[enrollment.CourseID] = course
+
+						result.AcccountName = course.Account.Name
+						result.CourseName = course.Name
+						result.CourseState = course.WorkflowState
+					}
+
+					results = append(results, result)
+				}
+			}
+		}
+
+		if err := json.NewEncoder(w).Encode(&results); err != nil {
+			http.Error(w, "error encoding json response", http.StatusInternalServerError)
+		}
+	}
+}
+
 // GetUngradedAssignmentsByCourseID retrieves ungraded assignments in the given course ID.
 // Ungraded assignments are organised by each section within the course.
 func (c *APIController) GetUngradedAssignmentsByCourseID(w http.ResponseWriter, r *http.Request) {

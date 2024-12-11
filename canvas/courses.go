@@ -22,6 +22,14 @@ const (
 	DesignerCourseEnrollment CourseEnrollmentType = "designer"
 )
 
+type CourseWorkflowState string
+
+const (
+	ClaimedCourseWorkflowState   CourseWorkflowState = "claimed"
+	AvailableCourseWorkflowState CourseWorkflowState = "available"
+	DeletedCourseWorkflowState   CourseWorkflowState = "deleted"
+)
+
 type Course struct {
 	ID                int         `json:"id"`
 	CourseCode        string      `json:"course_code"`
