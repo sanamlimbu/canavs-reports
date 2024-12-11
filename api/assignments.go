@@ -81,16 +81,18 @@ func (c *APIController) GetUngradedAssignmentsByUserID(w http.ResponseWriter, r 
 
 	results := make([]*GetUngradedAssignmentsByUserIDResponse, 0)
 
-	coursesMap := make(map[int]canvas.Course)
-
 	courses, code, err := c.canvasClient.GetCoursesByUserID(ctx, user.ID)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("error fetching courses of user: %d", user.ID), code)
 		return
 	}
 
+	// There can be enrollments but course is not available.
+	// So there can be more courses than len(courses).
+	coursesMap := make(map[int]*canvas.Course, 0)
+
 	for _, course := range courses {
-		coursesMap[course.ID] = *course
+		coursesMap[course.ID] = course
 	}
 
 	// skip "invited", "rejected", and "deleted" enrollments
@@ -153,7 +155,7 @@ func (c *APIController) GetUngradedAssignmentsByUserID(w http.ResponseWriter, r 
 							return
 						}
 
-						coursesMap[enrollment.CourseID] = course
+						coursesMap[enrollment.CourseID] = &course
 
 						result.AcccountName = course.Account.Name
 						result.CourseName = course.Name
@@ -344,7 +346,9 @@ func (c *APIController) GetStudentAssignmentsResultByUserID(w http.ResponseWrite
 		return
 	}
 
-	courseByCourseID := make(map[int]*canvas.Course, len(courses))
+	// There can be enrollments but course is not available.
+	// So there can be more courses than len(courses).
+	courseByCourseID := make(map[int]*canvas.Course, 0)
 
 	for _, course := range courses {
 		courseByCourseID[course.ID] = course
